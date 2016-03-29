@@ -1,0 +1,158 @@
+<!--
+Copyright (c) 2016 The Ayla Project Authors.
+This code may only be used under the MIT style license found at http://aylaweb.github.io/LICENSE.txt
+The complete set of authors may be found at http://aylaweb.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://aylaweb.github.io/CONTRIBUTORS.txt
+-->
+
+<link href="../polymer/polymer.html"  rel="import">
+<link href="../neon-animation/web-animations.html"  rel="import">
+<link href="../ayla/ayla.html"  rel="import">
+<link href="./animations/at-animation.html"  rel="import">
+<link href="../neon-animation/neon-animation-runner-behavior.html"  rel="import">
+<link href="../vip-react/vip-react-behavior.html"  rel="import">
+<link href="../vip-seektime/vip-seektime-behavior.html"  rel="import">
+<link href="../vip-onoff/vip-onoff-behavior.html"  rel="import">
+
+<script>
+    Ayla = window.Ayla || {};
+    Ayla.VipAnimaBehavior = [{
+            properties: {
+                anima: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                    //      observer: '_animaInitChanged'
+                },
+                animations: {
+                    type: Object,
+                    value: function () {
+                        return {};
+                    }
+                }
+            },
+            observers: ['_animaChanged(anima.*)'],
+            // Animation player created to play all the animations
+            created: function () {
+                console.log(this.id + " -> " + this.localName + " -> vip-anima -> Event created");
+            },
+            attached: function () {
+                console.log(this.id + " -> " + this.localName + " -> vip-anima -> Event attached");
+            },
+            detached: function () {
+                console.log(this.id + " -> " + this.localName + " -> vip-anima -> Event detached");
+            },
+            ready: function () {
+                console.log(this.id + " -> " + this.localName + " -> vip-anima -> Event ready");
+            },
+            processAnima: function (anima) {
+                var animatedElement = this._getElem(anima.element, anima.local || false);
+                if (anima.custom) {
+                    //   anima.name = this.id + "_" + anima.name;
+                    Polymer({
+                        is: anima.name,
+                        behaviors: [
+                            Polymer.NeonAnimationBehavior,
+                            Ayla.VipRuleBehavior, Ayla.VipSeekTimeBehavior,
+                            Ayla.VipOnOffBehavior],
+                        configure: function (config) {
+                            var node = config.node;
+                            this._effect = new KeyframeEffect(node, config.keyframes, config.timing);
+                            if (config.synch) {
+                                this.seekTimeSource = config.synch;
+                                this.onOffSource = config.synch;
+                            }
+                            if (config.rules) {
+                                this.rules = this.rules || [];
+                                config.rules.forEach(function (ruleReact) {
+                                    this.push('rules', ruleReact);
+                                }, this);
+                            }
+                            this.id = config.id;
+                            return this._effect;
+                        }
+
+                    });
+                }
+                if (anima.at) {
+                    anima.timing = {duration: anima.at * 1000};
+                    anima.name = 'at-animation';
+                }
+                /*  if (anima.entry)
+                 anima.entry.node = animatedElement;
+                 else anima.node = animatedElement; */
+                this.animationConfig = {};
+                for (var prop in anima) {
+                    this.animationConfig[prop] = anima[prop];
+                }
+                this.animationConfig.node = animatedElement;
+                var animation = null;
+                animation = this.playAnimation();
+                this._player.pause();
+                Polymer.Base.extend(this._player, Ayla.Anima);
+                if (animation) {
+                    Polymer.Base.extend(animation, this._player);
+                    Polymer.Base.extend(animation, this._player.__proto__);
+                    if (anima.at) {
+                        animation.onfinish = function () {
+                            var next = (new Function("x", escodegen.generate(esprima.parse(this[anima.synched + anima.animaProp].then)))).bind(this.elem);
+                            next(this[anima.synched + anima.animaProp].params);
+                            // eval(escodegen.generate(esprima.parse(this[anima.synched + anima.animaProp].then))).apply(this.elem, this[anima.synched + anima.animaProp].params);
+                        };
+                        animation[anima.synched + anima.animaProp] = {};
+                        animation[anima.synched + anima.animaProp].params = [];
+                        if (anima.then) {
+                            animation[anima.synched + anima.animaProp].then = anima.then;
+                        }
+                        if (anima.params) {
+                            animation[anima.synched + anima.animaProp].params = anima.params;
+                        }
+                    }
+                    if (anima.onfinish) {
+                        animation.onfinish = anima.onfinish;
+                    }
+                    animation.elem = this;
+                    if (anima.auto) {
+                        animation.play();
+                    }
+                }
+                this.appendChild(animation);
+                return animation;
+            },
+            /*   _animaInitChanged: function (val, old) {
+             if (val) {
+             for (var animaProp in val) {
+             var anima = _.cloneDeep(val[animaProp]);
+             anima.id = animaProp;
+             this.processAnima(anima);
+             }
+             }
+             }, */
+            _animaChanged: function (changeRecord) {
+                if (!_.isEmpty(changeRecord.base) && changeRecord.path === 'anima') {
+                    for (var animaProp in changeRecord.value) {
+                        // changeRecord.value[animaProp].id = animaProp;
+                        this.animations[animaProp] = this.processAnima(changeRecord.value[animaProp]);
+                    }
+                }
+            },
+            _getElem: function (element, local) {
+                var elem = null;
+                if (element) {
+                    if (local)
+                    {
+                        elem = this.$[this.element] || null;
+                    }
+                    else {
+                        elem = Polymer.dom(this).querySelector('#' + element) || null;
+                    }
+
+                }
+                else {
+                    elem = this;
+                }
+                return elem;
+            }
+        }, Polymer.NeonAnimationRunnerBehavior];
+</script>

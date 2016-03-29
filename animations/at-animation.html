@@ -1,0 +1,38 @@
+<!--
+Copyright (c) 2016 The Ayla Project Authors.
+This code may only be used under the MIT style license found at http://aylaweb.github.io/LICENSE.txt
+The complete set of authors may be found at http://aylaweb.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://aylaweb.github.io/CONTRIBUTORS.txt
+-->
+
+<link href="../../polymer/polymer.html"  rel="import">
+<link href="../../neon-animation/neon-animation-behavior.html"  rel="import">
+<link href="../../vip-seektime/vip-seektime-behavior.html"  rel="import">
+<link href="../../vip-onoff/vip-onoff-behavior.html"  rel="import">
+
+<script>
+
+    Polymer({
+        is: 'at-animation',
+        behaviors: [
+            Polymer.NeonAnimationBehavior,
+            Ayla.VipRuleBehavior, Ayla.VipSeekTimeBehavior,
+            Ayla.VipOnOffBehavior],
+        configure: function (config) {
+            var node = config.node;
+            this._effect = new KeyframeEffect(node, [], config.timing);
+            if (config.synch) {
+                this.seekTimeSource = config.synch;
+                this.onOffSource = config.synch;
+            }
+            this.id = config.id;
+            if (Polymer.dom(node.root) === Polymer.dom(document))
+                Polymer.dom(node).appendChild(this);
+            else
+                Polymer.dom(node.root).appendChild(this);
+            return this._effect;
+        }
+
+    });
+
+</script>
