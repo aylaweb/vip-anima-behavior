@@ -1,0 +1,79 @@
+
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-meta/iron-meta.html">
+<link rel="import" href="../neon-animation/neon-animatable-behavior.html">
+
+<script>    
+    Ayla = window.Ayla || {};
+    Ayla.VipAnimationPlayerBehavior = [{
+        properties: {
+            _player: {
+                type: Object
+            }
+
+        },
+        _configureAnimationEffects: function (allConfigs) {
+            var allAnimations = [];
+            if (allConfigs.length > 0) {
+                for (var config, index = 0; config = allConfigs[index]; index++) {
+                    var animation = document.createElement(config.name);
+                    // is this element actually a neon animation?
+                    if (animation.isNeonAnimation) {
+                        var effect = animation.configure(config);
+                        if (effect) {
+                            allAnimations.push({
+                                animation: animation,
+                                config: config,
+                                effect: effect
+                            });
+                        }
+                    } else {
+                        console.warn(this.is + ':', config.name, 'not found!');
+                    }
+                }
+            }
+            return allAnimations;
+        },
+        _runAnimationEffects: function (allEffects) {
+            return document.timeline.play(new GroupEffect(allEffects));
+        },
+        _completeAnimations: function (allAnimations) {
+            for (var animation, index = 0; animation = allAnimations[index]; index++) {
+                animation.animation.complete(animation.config);
+            }
+        },
+       
+        playAnimation: function (type, cookie) {
+            var allConfigs = this.getAnimationConfig(type);
+            if (!allConfigs) {
+                return;
+            }
+            var allAnimations = this._configureAnimationEffects(allConfigs);
+            var allEffects = allAnimations.map(function (animation) {
+                return animation.effect;
+            });
+
+            if (allEffects.length > 0) {
+                this._player = this._runAnimationEffects(allEffects);
+                this._player.onfinish = function () {
+                    this._completeAnimations(allAnimations);
+
+                    this.fire('animation-finish', cookie, {bubbles: false});
+                }.bind(this);
+
+            } else {
+                this.fire('animation-finish', cookie, {bubbles: false});
+            }
+            
+            return allAnimations[0].animation;
+        },
+        
+        cancelAnimation: function () {
+            if (this._player) {
+                this._player.cancel();
+            }
+        }
+    },
+    Polymer.NeonAnimatableBehavior];
+
+</script>
